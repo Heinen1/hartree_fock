@@ -8,68 +8,9 @@ from scipy import special
 from scipy import linalg
 from scipy.integrate import quad
 from scipy.special import binom
-
-
-class atom():
-    # only valid for STO-3G basis
-    def __init__(self, element, coords):
-        self.element = element
-        self.coords = np.array(coords)
-        self.bf = list()
-        
-        if element == 'H':
-            # 1s
-            alpha = [0.3425250914E+01, 0.6239137298E+00, 0.1688554040E+00]
-            coefs = [0.1543289673E+00, 0.5353281423E+00, 0.4446345422E+00]        
-            self.bf = [[primitive_gaussian(i, j, coords, 0, 0, 0) for i, j in zip(alpha, coefs)]]
-
-        
-        if element == 'O':
-            # 1s
-            alpha = [130.7093214, 23.80886605, 6.443608313]
-            coefs = [0.1543289673E+00, 0.5353281423E+00, 0.4446345422E+00]
-            bf_1s = self.basis_function(alpha, coefs, 0, 0, 0)
-            
-            # 2s
-            alpha = [5.033151319, 1.169596125, 0.38038896]
-            coefs = [-0.09996722919, 0.3995128261, 0.700115468]
-            bf_2s = self.basis_function(alpha, coefs, 0, 0, 0)
-            
-            # 2px
-            alpha = [5.033151319, 1.169596125, 0.38038896]
-            coefs = [0.155916275, 0.6076837186, 0.3919573931]
-            bf_2px = self.basis_function(alpha, coefs, 1, 0, 0)
-            
-            # 2py
-            alpha = [5.033151319, 1.169596125, 0.38038896]
-            coefs = [0.155916275, 0.607683718, 0.3919573931]
-            bf_2py = self.basis_function(alpha, coefs, 0, 1, 0)
-            
-            # 2pz
-            alpha = [5.033151319, 1.169596125, 0.38038896]
-            coefs = [0.155916275, 0.6076837186, 0.3919573931]
-            bf_2pz = self.basis_function(alpha, coefs, 0, 0, 1)
-
-            self.bf = [bf_1s, bf_2s, bf_2px, bf_2py, bf_2pz]
-        
-    def basis_function(self, alpha, coefs, lx, ly, lz):
-        return [primitive_gaussian(i, j, self.coords, lx, ly, lz) for i, j in zip(alpha, coefs)]
-
-class primitive_gaussian():
-    # general form gaussian G
-    # G_nlm(r, phi, psi) = N_n * r^(n-1) * exp(-a * r^2) * Y_l^m(phi, psi)
-    # 1s-orbital: n = 1, l = m = 0
-    # G_100 = N_1 * exp( -a * r^2) * Y_0^0
-    # Y_0^0 = 1 / sqrt(4 * pi)
-    # Integrate A.1 from S&Z give N = (2 * a / pi)^0.75 for 1s
-    
-    def __init__(self, alpha, coeff, coordinates, lx, ly, lz):
-        self.alpha = alpha
-        self.coeff = coeff  # contraction coefficients
-        self.coordinates = np.array(coordinates)
-        self.A = (2.0 *  alpha / np.pi)**0.75 # other terms for l1, l2 l
-        self.angular = np.array([lx, ly, lz])
-        
+from classes.c_atom import atom
+from classes.c_primitive_gaussian import primitive_gaussian
+       
 
 def overlap(molecule):
     
@@ -227,7 +168,6 @@ def binomial_expansion(P, A, B, alpha, beta, a, b):
             db = binom(a, i)*binom(b, j)
             product = np.power(P-A, a-i) * np.power(P-B, b-j)
             result += df*db*product/np.power(2*(alpha + beta), (i+j)/2)
-    print(result)
     return result
     
 
@@ -528,11 +468,10 @@ print("Elec-Electron repulsion", electron_electron_repulsion(molecule))
 print("Nuc-Nuc repulsion", nuclear_nuclear_repulsion_energy(atom_coordinates, Z))
 
 
+# water molecule in STO-3G basis
 H1_xyz = [0, 1.43233673, -0.96104039]
 H2_xyz = [0, -1.43233673, -0.96104039]
 O_xyz = [0, 0, 0.24026010]
-
-# H2O in STO-3G
 
 H1 = atom('H', H1_xyz)
 H2 = atom('H', H2_xyz)
