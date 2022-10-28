@@ -24,7 +24,6 @@ class primitive_gaussian():
             ly (int): angular momentum in y
             lz (int): angular momentum in z
         """        
-        
         self.alpha = alpha
         self.coeff = coeff 
         self.coordinates = np.array(coordinates)
