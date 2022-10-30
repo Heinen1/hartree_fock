@@ -1,6 +1,9 @@
 import numpy as np
 from classes.c_primitive_gaussian import primitive_gaussian
 
+# define nuclear charges for each atom type
+nuclear_charges = {'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7, 'O': 8}
+
 class atom():
     """
     Each atom consists of atomic orbital and contracted basis functions
