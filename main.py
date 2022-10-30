@@ -8,6 +8,7 @@ from scipy import linalg
 from classes.c_atom import atom
 from classes.c_primitive_gaussian import primitive_gaussian
 from integrals import *
+from integrals_spherical import *
 
 # water molecule in STO-3G basis
 H1_xyz = [0, 1.43233673, -0.96104039]
@@ -44,6 +45,7 @@ print(overlap(molecule))
 print(overlap_numerical(molecule))
 print(overlap_hm(molecule))
 print(kinetic(molecule))
+print(kinetic_recursive(molecule))
 print(electron_nuclear_attraction(molecule, atom_coordinates, Z)) # atomic units
 print("Elec-Electron repulsion", electron_electron_repulsion(molecule))
 print("Nuc-Nuc repulsion", nuclear_nuclear_repulsion_energy(atom_coordinates, Z))
