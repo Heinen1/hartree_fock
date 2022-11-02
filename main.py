@@ -18,8 +18,8 @@ def main():
     # molecule definition consists of atomic basis functions (bf)
     molecule = H1.bf + H2.bf + O.bf
 
-    #print(overlap_hm_recursive(molecule))
-    #print(kinetic_recursive(molecule))
+    print(overlap_recursive(molecule))
+    print(kinetic_recursive(molecule))
     print(nuclear_electron_recursive(molecule,
         np.array([H1_xyz, H2_xyz, O_xyz]),
         np.array([H1.element, H2.element, O.element])))
