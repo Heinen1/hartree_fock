@@ -197,77 +197,112 @@ def E(P, A, B, p, a, b):
     else:
         return E(P, A, B, p, a+1, b-1) + (A - B) * E(P, A, B, p, a, b-1)
 
-def nuclear_electron_recursive(molecule, atom_coords, Zlist):
+def nuclear_electron_recursive(molecule, atom_coords, atom_types):
+    """Calculate nuclear-electron attraction integral matrix using Gaussian basis functions.
+
+    Args:
+        molecule (list): basis functions of primitive gaussians
+        atom_coords (list): atomic coordinates
+        Zlist (list): atom types for each atom in molecule
+
+    Returns:
+        ndarray: nuclear-repulsion integral matrix
+    """
     nbasis = len(molecule)
     atoms = len(atom_coords)    
-    VNe = np.zeros([nbasis, nbasis])
-    Z_charge = [nuclear_charges[Z] for Z in Zlist]
+    VNeMatrix = np.zeros([nbasis, nbasis])
+    Z_charge = [nuclear_charges[atom_type] for atom_type in atom_types]
     
     for atom in range(atoms):
         R = atom_coords[atom]
         for i in range(nbasis):
             for j in range(nbasis):
-                
                 nprimitives_i = len(molecule[i])
                 nprimitives_j = len(molecule[j])
                 
                 for k in range(nprimitives_i):
                     for l in range(nprimitives_j):
-                        ax, ay, az = molecule[i][k].angular
-                        bx, by, bz = molecule[j][l].angular
+                        N1 = normalization(molecule[i][k].alpha, *molecule[i][k].angular)
+                        N2 = normalization(molecule[j][l].alpha, *molecule[j][l].angular)
+                        alpha_sum, alpha_product, _ = parameters(molecule[i][k], molecule[j][l])
 
-                        N1 = normalization(molecule[i][k].alpha, ax, ay, az)
-                        N2 = normalization(molecule[j][l].alpha, bx, by, bz)
-                        c1 = molecule[i][k].coeff
-                        c2 = molecule[j][l].coeff 
+                        dist = np.sum(np.square(molecule[i][k].coordinates - molecule[j][l].coordinates))
+                        prefactor = np.exp(-(alpha_product/alpha_sum)*dist)
 
-                        p = (molecule[i][k].coordinates * molecule[i][k].alpha) + (molecule[j][l].coordinates * molecule[j][l].alpha)
-                        sum_alpha = molecule[i][k].alpha + molecule[j][l].alpha
-                        P = p / sum_alpha
-                        
-                        multiple_alpha = molecule[i][k].alpha * molecule[j][l].alpha
-                        dist = (np.sum(np.square(molecule[i][k].coordinates - molecule[j][l].coordinates)))
-                        prefactor = np.exp(-(multiple_alpha/sum_alpha)*(dist))
+                        vne_int, _ = quad(boys_integrand, 0, 1,  limit=500, epsabs=1e-10, args=(
+                            molecule[i][k], molecule[j][l], R)
+                        )
 
-                        vne_int, _ = quad(VNeIntegrand, 0, 1, epsabs=1e-10, args=(molecule[i][k], molecule[j][l], R))
-                        # Replacement operator: /. t --> (x + 1) / 2 means: to replace variable t with (x + 1) / 2
-                        # Boys function integration limits: [0, 1]
-                        # Gauss-Chebysheve quadratic integrationlimits: [-1, 1] --> (x + 1) / 2 gives [0, 1]
-                        VNe[i, j] += -Z_charge[atom] * N1 * N2 * c1 * c2 * vne_int * prefactor * (2 * np.pi) / sum_alpha
-    return VNe
+                        VNeMatrix[i, j] += -Z_charge[atom] * N1 * N2 * molecule[i][k].coeff * molecule[j][l].coeff  * vne_int * prefactor * (2 * np.pi) / alpha_sum
+    return VNeMatrix
 
-def VNeIntegrand(t, bf1, bf2, R):
+def boys_integrand(t, bf1, bf2, R):
+    """Integrand to Boys functions F(t) = int_0^1 t^(2n) * exp(-x * t^2) dt
+
+    Args:
+        t (float): integrating variable
+        bf1 (class): basis function 1
+        bf2 (class): basis function 2
+        R (ndarray): nuclear coordinates
+
+    Returns:
+        float: integrand
+    """
     alpha = bf1.alpha
-    beta = bf1.alpha
+    beta = bf2.alpha
     A = bf1.coordinates
     B = bf2.coordinates
-    p = alpha + beta
-    P = ((alpha * A) + (beta * B)) / p
+    alpha_sum = alpha + beta
+    P = ((alpha * A) + (beta * B)) / alpha_sum
     dist = (np.sum(np.square(P - R)))
     
-    nx = Nrec(P[0], A[0], B[0], alpha, beta, bf1.angular[0], bf2.angular[0], t, R[0])
-    ny = Nrec(P[1], A[1], B[1], alpha, beta, bf1.angular[1], bf2.angular[1], t, R[1])
-    nz = Nrec(P[2], A[2], B[2], alpha, beta, bf1.angular[2], bf2.angular[2], t, R[2])
+    n = 1
+    for index in range(3):
+        n *= N(P[index], A[index], B[index], alpha, beta, bf1.angular[index], bf2.angular[index], t, R[index])
 
-    return np.exp(-p*(t**2) * abs(dist)) * nx * ny * nz
+    return np.exp(-alpha_sum*(t**2) * abs(dist)) * n
 
 
-def Nrec(P, A, B, alpha, beta, a, b, t, R):
+def N(P, A, B, alpha, beta, a, b, t, R):
+    """Recursive function need to calculate the nuclear-electron integral
+
+    Args:
+        P (float): alpha * bf1 + beta * bf2 / (alpha + beta)
+        A (float): coordinates of center of basis function A
+        B (float): coordinates of center of basis function B
+        alpha (float): exponent of basis function A
+        beta (float): exponent of basis function B
+        a (float): angular moment of basis function A
+        b (float): angular moment of basis function B
+        t (float): integrating variable of Boys function
+        R (float): nuclear coordinate
+
+    Returns:
+        float: result of recusion
+    """
     p = alpha + beta
     if (a == 0) and (b == 0):
        return 1.0
     elif (a == 1) and (b == 0):
-        return -(A - P + (t**2 * (P - R)))
+        return -(A - P + ((t**2) * (P - R)))
     elif (b == 0):
-        term1 = -(A - P + (t**2)*(P - R)) * Nrec(P, A, B, alpha, beta, a - 1, 0, t, R)
-        term2 = ((a-1) / (2*p)) * (1 - t**2) * Nrec(P, A, B, alpha, beta, a - 2, 0, t, R)
+        term1 = -(A - P + (t**2)*(P - R)) * N(P, A, B, alpha, beta, a - 1, 0, t, R)
+        term2 = ((a-1) / (2*p)) * (1 - t**2) * N(P, A, B, alpha, beta, a - 2, 0, t, R)
         return term1 + term2
     else:
-        term1 = Nrec(P, A, B, alpha, beta, a + 1, b - 1, t, R)
-        term2 = (A - B) * Nrec(P, A, B, alpha, beta, a, b - 1, t, R)
-        return term1 + term2
+        term1 = N(P, A, B, alpha, beta, a + 1, b - 1, t, R)
+        term2 = (A - B) * N(P, A, B, alpha, beta, a, b - 1, t, R)
+        return term1 + term2        
 
 def nuclear_nuclear_repulsion_energy(atom_coords):
+    """Nuclear repulsion energy
+
+    Args:
+        atom_coords (list): nuclear coordinates of atoms in molecule
+
+    Returns:
+        float: total nuclear repulsion energy (Ha)
+    """
     n_atoms = len(atom_coords)
     E_NN = 0
     
