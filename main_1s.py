@@ -5,7 +5,7 @@ from integrals_spherical import *  # integrals valid for 1s only
 from classes.c_primitive_gaussian import primitive_gaussian
 from scf import scf_cycle
 from integrals import *
-from classes.c_atom2 import atom2
+from classes.c_atom import atom
 
 # STO-3G basis for 1s orbital on hydrogen
 # exponents and zeta taken from basissetexchange.org
