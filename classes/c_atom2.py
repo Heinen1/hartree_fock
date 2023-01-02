@@ -4,6 +4,9 @@ from classes.c_primitive_gaussian import primitive_gaussian as prim_gauss
 
 
 class atom2:
+    """
+    Create object for each newly defined atom
+    """
     def __init__(self, element, coords, basis=None):
         self.element = element
         self.coords = np.array(coords)
