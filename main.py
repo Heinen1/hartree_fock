@@ -16,13 +16,39 @@ def main():
     O = atom('O', O_xyz)
 
     # molecule definition consists of atomic basis functions (bf)
-    molecule = H1.bf + H2.bf + O.bf
+    water = H1.bf + H2.bf + O.bf
 
-    print(overlap_recursive(molecule))
-    print(kinetic_recursive(molecule))
-    print(nuclear_electron_recursive(molecule,
-        np.array([H1_xyz, H2_xyz, O_xyz]),
-        np.array([H1.element, H2.element, O.element])))
+    #print(overlap_recursive(water))
+    #print(kinetic_recursive(water))
+    #print(nuclear_electron_recursive(water,
+    #    np.array([H1_xyz, H2_xyz, O_xyz]),
+    #    np.array([H1.element, H2.element, O.element])))
+    #print(nuclear_nuclear_repulsion_energy(np.array([H1_xyz, H2_xyz, O_xyz]),
+    #    np.array([H1.element, H2.element, O.element])))
+    print(electron_electron_repulsion(water))
 
 if __name__ == '__main':
     main()
+    
+    
+
+H1_xyz = [0, 1.43233673, -0.96104039]
+H2_xyz = [0, -1.43233673, -0.96104039]
+O_xyz = [0, 0, 0.24026010]
+
+# define each atom in water molecule
+H1 = atom('H', H1_xyz)
+H2 = atom('H', H2_xyz)
+O = atom('O', O_xyz)
+
+# molecule definition consists of atomic basis functions (bf)
+water = H1.bf + H2.bf + O.bf
+
+#print(overlap_recursive(water))
+#print(kinetic_recursive(water))
+#print(nuclear_electron_recursive(water,
+#    np.array([H1_xyz, H2_xyz, O_xyz]),
+#    np.array([H1.element, H2.element, O.element])))
+#print(nuclear_nuclear_repulsion_energy(np.array([H1_xyz, H2_xyz, O_xyz]),
+#    np.array([H1.element, H2.element, O.element])))
+print(electron_electron_repulsion(water))
