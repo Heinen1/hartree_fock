@@ -1,12 +1,10 @@
 .DS_Store
 # Byte-compiled / optimized / DLL files
-__pycache__/
-*/__pycache__/
-*/*/__pycache__/
+__pycache__
+*/__pycache__
+*/*/__pycache__
 *.py[cod]
 *$py.class
-# no basis set files
-*.nw
 # no latex directory
 tex
 # no backup directory
