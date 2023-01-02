@@ -132,7 +132,7 @@ def electron_nuclear_attraction(molecule, atom_coordinates, Z):
     return V_ne
 
 
-def electron_electron_repulsion(molecule):
+def electron_electron_repulsion_s(molecule):
     nbasis = len(molecule)
     
     V_ee = np.zeros([nbasis, nbasis, nbasis, nbasis])
