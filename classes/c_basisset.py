@@ -6,7 +6,7 @@ shell_subs = {1: 'S', 2: 'P', 3: 'D'}
 
 class basisset:
     """
-    Read NWChem format file fromm basissetexchange.org (BSSE) and 
+    Read NWChem format file fromm basissetexchange.org (BSE) and 
     create basis set using a dictionary format:
     'element' : {"gto_1": {"coef": [],
                            "exp": []},
@@ -17,12 +17,12 @@ class basisset:
 
     def __init__(self, filename):
         """
-        Load exponents and coefficients from BSSE.
+        Load exponents and coefficients from BSE.
 
         Parameters
         ----------
         filename : string
-            NWChem file from BSSE.
+            NWChem file from BSE.
 
         Returns
         -------
@@ -35,7 +35,7 @@ class basisset:
 
     def read(self):
         """
-        Open basis set file from BSSE.
+        Open basis set file from BSE.
 
         Returns
         -------
