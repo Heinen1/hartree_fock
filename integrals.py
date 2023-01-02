@@ -1,3 +1,5 @@
+import sys
+#sys.setrecursionlimit(1500) # carefull with recursions!
 import numpy as np
 from scipy import special
 from scipy.integrate import quad
@@ -292,9 +294,186 @@ def N(P, A, B, alpha, beta, a, b, t, R):
     else:
         term1 = N(P, A, B, alpha, beta, a + 1, b - 1, t, R)
         term2 = (A - B) * N(P, A, B, alpha, beta, a, b - 1, t, R)
-        return term1 + term2        
+        return term1 + term2
 
-def nuclear_nuclear_repulsion_energy(atom_coords):
+def electron_electron_repulsion(molecule):
+    nbasis = len(molecule)   
+    VeeMatrix = np.zeros([nbasis, nbasis, nbasis, nbasis])
+    for i in range(nbasis):
+        for j in range(nbasis):
+            for k in range(nbasis):
+                for l in range(nbasis):
+                    nprimitives_i = len(molecule[i])
+                    nprimitives_j = len(molecule[j])
+                    nprimitives_k = len(molecule[k])
+                    nprimitives_l = len(molecule[l])
+
+                    #Imatrix = 0
+                    for ii in range(nprimitives_i):
+                        for jj in range(nprimitives_j):
+                            for kk in range(nprimitives_k):
+                                for ll in range(nprimitives_l):
+                                    Ni = normalization(molecule[i][ii].alpha, *molecule[i][ii].angular)
+                                    Nj = normalization(molecule[j][jj].alpha, *molecule[j][jj].angular)
+                                    Nk = normalization(molecule[k][kk].alpha, *molecule[k][kk].angular)
+                                    Nl = normalization(molecule[l][ll].alpha, *molecule[l][ll].angular)
+                                    N = Ni * Nj * Nk * Nl
+                                    cicjckcl = molecule[i][ii].coeff * molecule[j][jj].coeff * molecule[k][kk].coeff * molecule[l][ll].coeff
+                                    alpha_sum_ij, alpha_product_ij, P = parameters(molecule[i][ii], molecule[j][jj])  
+                                    alpha_sum_kl, alpha_product_kl, Q = parameters(molecule[k][kk], molecule[l][ll])  
+                                    dist_ij = np.sum(np.square(molecule[i][ii].coordinates - molecule[j][jj].coordinates))
+                                    dist_kl = np.sum(np.square(molecule[k][kk].coordinates - molecule[l][ll].coordinates))
+                                    E_AB = np.exp(-(alpha_product_ij/alpha_sum_ij)*dist_ij)
+                                    E_CD = np.exp(-(alpha_product_kl/alpha_sum_kl)*dist_kl)
+
+                                    i1, j1, k1 = molecule[i][ii].angular
+                                    i2, j2, k2 = molecule[j][jj].angular
+                                    i3, j3, k3 = molecule[k][kk].angular
+                                    i4, j4, k4 = molecule[l][ll].angular
+                                    PAx, PAy, PAz = P - molecule[i][ii].coordinates
+                                    PBx, PBy, PBz = P - molecule[j][jj].coordinates
+                                    PCx, PCy, PCz = P - molecule[k][kk].coordinates
+                                    PDx, PDy, PDz = P - molecule[l][ll].coordinates
+                                    PQx, PQy, PQz = P - Q
+                                    Imatrix = 0
+                                    for t in range(i1 + i2 + 1):
+                                        for u in range(j1 + j2 + 1):
+                                            for v in range(k1 + k2 + 1):
+                                                for t2 in range(i3 + i4 + 1):
+                                                    for u2 in range(j3 + j4 + 1):
+                                                        for v2 in range(k3 + k4 + 1):
+                                                            E1 = mdE(i1, i2, E_AB, PAx, PBx, alpha_sum_ij, t)
+                                                            E2 = mdE(j1, j2, E_AB, PAy, PBy, alpha_sum_ij, u)
+                                                            E3 = mdE(k1, k2, E_AB, PAz, PBz, alpha_sum_ij, v)
+                                                            E4 = mdE(i3, i4, E_CD, PCx, PDx, alpha_sum_kl, t2)
+                                                            E5 = mdE(j3, j4, E_CD, PCy, PDy, alpha_sum_kl, u2)
+                                                            E6 = mdE(k3, k4, E_CD, PCz, PDz, alpha_sum_kl, v2)
+                                                            R1 = mdR(t + t2, u + u2, v + v2, 0, (alpha_sum_ij * alpha_sum_kl)/ (alpha_sum_ij + alpha_sum_kl), PQx, PQy, PQz)
+                                                            Imatrix += E1*E2*E3*E4*E5*E6*R1 * (-1)**(t2 + u2 + v2)
+
+                                    #Ix, abserror = quad(boys_integrand_vee, 0, 1,
+                                    #args=(molecule[i][ii], molecule[j][jj], molecule[k][kk], molecule[l][ll], P, Q, alpha_sum_ij, alpha_sum_kl))
+                                    prefactor = E_AB * E_CD * (2*(np.pi**2.5)) / (alpha_sum_ij * alpha_sum_kl * np.sqrt(alpha_sum_ij + alpha_sum_kl))
+
+                                    VeeMatrix[i, j, k, l] += N * cicjckcl * prefactor * Imatrix
+    return VeeMatrix
+
+
+def boys(x, n):
+    if x == 0:
+        return 1.0 / (2 * n + 1)
+    else:
+        return special.gammainc(n + 0.5, x) *  special.gamma(n + 0.5) * (1.0 / (2 * x ** (n + 0.5)))
+    
+
+def mdR(t, u, v, n, eta, x, y, z):
+    if t < 0 or u < 0 or v < 0 :
+        return 0
+    if t == 0 and u == 0 and v == 0:
+        r = (x**2) + (y**2) + (z**2)
+        return ((-2 * eta)**n) * boys(eta * r, n)
+    elif t > 0:
+        return (t - 1) * mdR(t - 2, u, v, n + 1, eta, x, y, z) + x * mdR(t - 1, u, v, n + 1, eta, x, y, z)
+    elif u > 0:
+        return (u - 1) * mdR(t, u - 2, v, n + 1, eta, x, y, z) + y * mdR(t, u - 1, v, n + 1, eta, x, y, z)
+    elif v > 0:
+        return (v - 1) * mdR(t, u, v - 2, n + 1, eta, x, y, z) + z * mdR(t, u, v -1, n + 1, eta, x, y, z)
+
+def mdE(i, j, E_AB, X_PA, X_PB, alpha_sum, t):
+    if (i < 0) or (j < 0) or (t < 0):
+        return 0
+    if (i == 0) and (j == 0):
+        return 1
+    if j > 0:
+        term1 = (1 / (2 * alpha_sum)) * mdE(i, j - 1, E_AB, X_PA, X_PB, alpha_sum, 1)
+        term2 = X_PB * mdE(i, j - 1, E_AB, X_PA, X_PB, alpha_sum, 1)
+        term3 = (t + 1) * mdE(i, j - 1, E_AB, X_PA, X_PB, alpha_sum, 1)
+        return term1 + term2 + term3  
+    if j == 0:
+        term1 = (1 / (2 * alpha_sum)) * mdE(i - 1, j, E_AB, X_PA, X_PB, alpha_sum, 1)
+        term2 = X_PA * mdE(i - 1, j, E_AB, X_PA, X_PB, alpha_sum, 1)
+        term3 = (t + 1) * mdE(i - 1, j, E_AB, X_PA, X_PB, alpha_sum, 1)
+        return term1 + term2 + term3
+
+
+
+def boys_integrand_vee(t, bf_a, bf_b, bf_c, bf_d, P, Q, p, q):
+    IProduct = 1
+    rho = (p * q) / (p + q)
+    dist_PQ2 = np.sum(np.square(P - Q))
+    for index in range(3):
+        IProduct *= I(bf_a.angular[index],
+                      bf_b.angular[index],
+                      bf_c.angular[index],
+                      bf_d.angular[index],
+                      P[index],
+                      Q[index],
+                      bf_a.coordinates[index],
+                      bf_b.coordinates[index],
+                      bf_c.coordinates[index],
+                      bf_d.coordinates[index],
+                      p, q, t)
+    integrand = IProduct * np.exp(-(rho * t**2) * dist_PQ2)
+
+    return integrand
+
+def I(a, b, c, d, P, Q, A, B, C, D, p, q, t):
+    n = a + b
+    m = c + d
+    C00 = (P - A) - (q * ((P - Q) / (p + q)) * t**2)
+    C00d = (P - B) - (q * ((P - Q) / (p + q)) * t**2)
+    D00 = (Q - C) - (p * ((P - Q) / (p + q)) * t**2)
+    D00d = (Q - D) - (p * ((P - Q) / (p + q)) * t**2)
+    B00 = (t**2) / (2 * (p + q))
+    B10 = (1 / (2 * p)) - ((q * t**2) / (2 * p * (p + q)))
+    B01 = (1 / (2 * q)) - ((p * t**2) / (2 * q * (p + q)))
+    
+    I = np.ones([n + 1, m + 1])
+    #I[0, 0] = (np.pi / np.sqrt()) * np.exp()
+
+    # vertical recurrence relation
+    I = I_vertical(I, n, m, C00, D00, B01, B10, B01)
+    # horitzon recurrence relation
+    I = I_horizontal(I, a, c, A-B, C-D)
+
+    return I
+
+def I_vertical(I, n, m, C00, D00, B00, B10, B01):
+    if n > 0:
+        I[1, 0] = C00 * I[0, 0]
+    if m > 0:
+        I[0, 1] = D00 * I[0, 0]
+    
+    for a in range(2, n+1):
+        I[a, 0] = (a - 1) * B10 * I[a-2, 0] + C00 * I(a-1, 0)
+    for b in range(2, m+1):
+        I[0, b] = (b - 1) * B01 * I[0, b-2] + D00 * I(0, b-1)
+
+    if (m == 0) or (n == 0):
+        return I
+
+    for a in range(1, n+1):
+        I[a, 1] = (n - 1) * B10 * I[a-2, 1] + B00 * I[a-1, 0] + C00 * I[a-1, 1]
+        for b in range(2, m+1):
+            I[a, b] = (b - 1) * B01 * I[a, b-2] + a * B00 * I[a-1, b-1] + D00 * I[a, b-1]
+    
+    return I
+
+def I_horizontal(I, i, k, AB, CD):
+    ndim, mdim = I.shape
+    j = ndim - i -1
+    l = mdim - k - 1
+    ijkl = 0
+
+    for m in range(l+1):
+        ijm0 =0
+        for n in range(j+1):
+            ijm0 += binom(j, n) * np.power(AB, j-n) * I[n+i, m+k]
+        ijkl += binom(l, m) * np.power(CD, l-m) * ijm0
+    
+    return ijkl
+
+def nuclear_nuclear_repulsion_energy(atom_coords, atom_types):
     """Nuclear repulsion energy
 
     Args:
@@ -307,20 +486,12 @@ def nuclear_nuclear_repulsion_energy(atom_coords):
     E_NN = 0
     
     for i in range(n_atoms):
-        Zi = zlist[i]
-        for j in range(n_atoms):
-            if j > i:
-                Zj = zlist[j]
-                
-                Rijx = atom_coords[i][0] - atom_coords[j][0]
-                Rijy = atom_coords[i][1] - atom_coords[j][1]
-                Rijz = atom_coords[i][2] - atom_coords[j][2]
-                
-                Rij = np.sqrt(Rijx**2 + Rijy**2 + Rijz**2)
-                
-                E_NN += (Zi * Zj) / Rij
+        Z_i = nuclear_charges[atom_types[i]]
+        for j in range(i+1, len(atom_coords)):
+                Z_j = nuclear_charges[atom_types[j]]
+                R = np.sqrt(np.sum(np.square(atom_coords[i] - atom_coords[j])))
+                E_NN += (Z_i * Z_j) / R
     return E_NN
-
 
 
 
