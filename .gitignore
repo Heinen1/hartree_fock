@@ -1,0 +1,9 @@
+.DS_Store
+# no python interpreter files
+*.pyc
+# no cache files
+__pycache__/
+# no basis set files
+*.nw
+# no latex directory
+tex
