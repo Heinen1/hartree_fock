@@ -31,9 +31,9 @@ class readxyz:
         """
         Load basis set functions with specified basis set (STO-3G default)
         """
-        for atom in self.atoms:
-            self.molecule_bf += atom2(  atom['element'],
-                                        atom['coords'],
+        for atomi in self.atoms:
+            self.molecule_bf += atom(  atomi['element'],
+                                        atomi['coords'],
                                         self.basis_set).bf
 
     def read_file(self):

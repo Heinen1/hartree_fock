@@ -1,7 +1,11 @@
+import os
+
 # define first 10 chemical element types
 elements = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O']
 # define atom  shells(called sub shells)
 shell_subs = {1: 'S', 2: 'P', 3: 'D'}
+# directory containing basis sets
+prefix_basissets = 'basissets'
 
 
 class basisset:
@@ -45,7 +49,8 @@ class basisset:
         self.n_last = 0
         self.new_element = None
 
-        with open(self.filename) as bf_file:
+        basisset_file = os.path.join(prefix_basissets, self.filename)
+        with open(basisset_file) as bf_file:
             for line in bf_file:
                 cond1 = not line.startswith("#")
                 cond2 = not line.startswith("BASIS")
